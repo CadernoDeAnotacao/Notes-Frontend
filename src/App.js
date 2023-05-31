@@ -12,18 +12,57 @@ import RadioButton from './Componentes/Notes/RadioButton';
 
 function App() {
 
+  const [ selectedValue, setSelectedValue] = useState('all')
   const [ title, setTitles] = useState('')
   const [ notes, setNotes] = useState('')
   const [ allNotes, setAllNotes] = useState([])
 
   useEffect(() => {
-    async function getAllNotes(){
-      const response = await api.get('/annotations',)
-      setAllNotes(response.data)
-    }
-
     getAllNotes()
   }, [])
+
+  async function getAllNotes(){
+    const response = await api.get('/annotations',)
+    setAllNotes(response.data)
+  }
+
+  async function loadNotes(option){
+    const params = { priority: option}
+    const response = await api.get('/priorities', { params })
+
+    if(response){
+      setAllNotes(response.data)
+    }
+  }
+
+  function handleChange(e){
+    setSelectedValue(e.value)
+
+    if(e.checked && e.value !== 'all'){
+      loadNotes(e.value)
+    } else{
+      getAllNotes()
+    }
+  }
+
+
+   async function handleDelete(id){
+    const deletedNote = await api.delete(`/annotations/${id}`)
+
+    if(deletedNote){
+      setAllNotes(allNotes.filter(note => note._id !== id))
+      }
+    }
+
+   async function handleChangePriority(id){
+    const changePriority = await api.post(`/priorities/${id}`)
+
+    if(changePriority&& selectedValue !== 'all'){
+      loadNotes(selectedValue)
+      } else if (changePriority) {
+        getAllNotes()
+      }
+    }
 
   async function handleSubmit(e){
     e.preventDefault()
@@ -37,8 +76,16 @@ function App() {
     setTitles('') 
     setNotes('')
 
+   
+
+    if(selectedValue !== 'all'){
+      getAllNotes()
+    } else {
     //Atualizar na tela denamicamente
     setAllNotes([...allNotes, response.data])
+    }
+    setSelectedValue('all') 
+    
   }
 
   //Função para trocar a cor do botão salvar
@@ -69,13 +116,23 @@ function App() {
          </div>
          <button id='btn_submit' type='submit'>Salvar</button>
         </form>
-        <RadioButton/>
+        <RadioButton
+        selectedValue={selectedValue}
+        handleChange = {handleChange}
+        />
       </aside>
 
       <main>
       <ul>
         {allNotes.map(data => (
-        <Notes data ={data}/>
+        <Notes
+        key={data._id}
+        data ={data}
+        handleDelete = {handleDelete}
+        handleChangePriority = {handleChangePriority}
+        
+        />
+
         ))}
       </ul>
       </main>
